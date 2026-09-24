@@ -119,3 +119,20 @@ export function monthRange(yearMonth: string): { start: string; end: string } {
   const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
   return { start: `${m[1]}-${m[2]}-01`, end: `${m[1]}-${m[2]}-${String(last).padStart(2, "0")}` };
 }
+
+/** Add calendar months, clamping to the month's last day (31 Jan + 1 month = 28/29 Feb). */
+export function addMonths(date: string, months: number): string {
+  const { y, m, d } = parse(date);
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, last));
+  return target.toISOString().slice(0, 10);
+}
+
+const monthYearFormatter = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
+
+/** `2026-09-24` → `September 2026` */
+export function formatMonthYear(date: string): string {
+  const { y, m } = parse(date);
+  return monthYearFormatter.format(new Date(Date.UTC(y, m - 1, 1)));
+}

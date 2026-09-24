@@ -9,8 +9,10 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   APP_URL: z.string().url().default("http://localhost:3000"),
 
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  /** First sign-in with this address creates the owner account when no users exist yet. */
+  OWNER_EMAIL: z.string().email().optional(),
+
+  SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().default("fenlark"),
 
@@ -31,7 +33,9 @@ let cached: Env | null = null;
 
 export function env(): Env {
   if (cached) return cached;
-  const parsed = schema.safeParse(process.env);
+  // Treat blank values (`KEY=` in .env files) as unset.
+  const raw = Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined && v !== ""));
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
     throw new Error(`Invalid environment configuration — ${issues}`);
@@ -50,7 +54,12 @@ export function requireEnv<K extends keyof Env>(key: K): NonNullable<Env[K]> {
 
 export function isSupabaseConfigured(): boolean {
   const e = env();
-  return Boolean(e.NEXT_PUBLIC_SUPABASE_URL && e.NEXT_PUBLIC_SUPABASE_ANON_KEY && e.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(e.SUPABASE_URL && e.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+/** Tests and scripts swap DATABASE_URL etc. at runtime. */
+export function resetEnvCache(): void {
+  cached = null;
 }
 
 export function appUrl(path = ""): string {
