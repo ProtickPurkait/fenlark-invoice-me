@@ -2,6 +2,7 @@
   "name": "fenlark-invoice",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Invoicing system for fenlark.in \u2014 GST invoices, quotes, credit notes, payments and client portal",
   "engines": {
     "node": ">=20.18"

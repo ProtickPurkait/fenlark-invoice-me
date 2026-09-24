@@ -56,12 +56,13 @@ export function GstRateSelect(props: SelectProps) {
   );
 }
 
-export function UnitSelect(props: SelectProps) {
+/** `compact` shows only the code (for narrow table cells); the full name stays in the tooltip. */
+export function UnitSelect({ compact, ...props }: SelectProps & { compact?: boolean }) {
   return (
     <Select {...props}>
       {UQC_OPTIONS.map((u) => (
-        <option key={u.code} value={u.code}>
-          {u.label}
+        <option key={u.code} value={u.code} title={u.label}>
+          {compact ? u.code : u.label}
         </option>
       ))}
     </Select>
