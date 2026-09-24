@@ -1,0 +1,30 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# local env + data
+.env
+.env.local
+.env.*.local
+.data/
+samples/
+
+# logs
+npm-debug.log*
+*.log
+
+# os / editors
+.DS_Store
+.vscode/
+.idea/
+
+# playwright
+test-results/
+playwright-report/
+
+# vercel
+.vercel
