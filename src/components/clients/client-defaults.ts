@@ -25,6 +25,7 @@ export function clientDefaults(c: Client | null, defaults: { currency: string })
     tdsApplicable: c?.tdsApplicable ?? false,
     tdsRate: c?.tdsRate ?? "",
     tdsSection: c?.tdsSection ?? "",
+    tan: c?.tan ?? "",
     remindersEnabled: c?.remindersEnabled ?? true,
     portalEnabled: c?.portalEnabled ?? true,
     notes: c?.notes ?? "",

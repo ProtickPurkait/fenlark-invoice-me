@@ -229,6 +229,8 @@ export const clients = pgTable(
     tdsApplicable: boolean("tds_applicable").notNull().default(false),
     tdsRate: pct("tds_rate"),
     tdsSection: text("tds_section").notNull().default(""),
+    /** Deductor's TAN, to match TDS credits in Form 26AS. */
+    tan: text("tan").notNull().default(""),
     remindersEnabled: boolean("reminders_enabled").notNull().default(true),
     portalEnabled: boolean("portal_enabled").notNull().default(true),
     notes: text("notes").notNull().default(""),

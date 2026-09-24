@@ -1,0 +1,1 @@
+ALTER TABLE "clients" ADD COLUMN "tan" text DEFAULT '' NOT NULL;

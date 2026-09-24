@@ -43,6 +43,11 @@ export const clientSchema = z
       .nullable()
       .transform((v) => (v === "" || v === null ? null : v)),
     tdsSection: text(20),
+    tan: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((v) => v === "" || /^[A-Z]{4}[0-9]{5}[A-Z]$/.test(v), "TAN looks like BLRA12345B"),
     remindersEnabled: z.boolean(),
     portalEnabled: z.boolean(),
     notes: text(2000),

@@ -141,6 +141,9 @@ export function ClientForm({
               <Field label="TDS rate (%)" htmlFor="tdsRate" hint="Usually 10% (194J) or 2% (194C, technical services)" error={errorAt(errors, "tdsRate")}>
                 <Input id="tdsRate" inputMode="decimal" {...register("tdsRate")} />
               </Field>
+              <Field label="Client's TAN" htmlFor="tan" hint="Helps match TDS credits in Form 26AS" error={errorAt(errors, "tan")}>
+                <Input id="tan" className="uppercase" maxLength={10} {...register("tan")} />
+              </Field>
             </div>
           ) : null}
         </FormSection>
