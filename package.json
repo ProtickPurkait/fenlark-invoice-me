@@ -2,7 +2,7 @@
   "name": "fenlark-invoice",
   "version": "0.1.0",
   "private": true,
-  "description": "Invoicing system for fenlark.in — GST invoices, quotes, credit notes, payments and client portal",
+  "description": "Invoicing system for fenlark.in \u2014 GST invoices, quotes, credit notes, payments and client portal",
   "engines": {
     "node": ">=20.18"
   },
@@ -11,13 +11,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed.ts",
-    "pdf:samples": "tsx scripts/render-samples.tsx"
+    "db:migrate": "tsx --tsconfig scripts/tsconfig.json scripts/migrate.ts",
+    "db:seed": "tsx --tsconfig scripts/tsconfig.json scripts/seed.ts",
+    "pdf:samples": "tsx --tsconfig scripts/tsconfig.json scripts/render-samples.tsx",
+    "test:unit": "vitest run tests/unit",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -26,7 +28,6 @@
     "@radix-ui/react-slot": "^1.3.3",
     "@react-email/components": "^1.0.12",
     "@react-pdf/renderer": "^4.9.0",
-    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
