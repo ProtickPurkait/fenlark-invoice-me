@@ -5,8 +5,9 @@ import { env } from "@/lib/env";
 import { runDueProfiles } from "@/lib/recurring/service";
 import { runReminders } from "@/lib/reminders";
 
-// Recurring invoices can render PDFs and send email; give the job room.
-export const maxDuration = 300;
+// Recurring invoices render PDFs and send email. 60s is the Hobby-plan ceiling
+// without Fluid compute and plenty for a small business's daily volume.
+export const maxDuration = 60;
 
 /**
  * Daily job (Vercel Cron, see vercel.json): recurring invoices, then payment

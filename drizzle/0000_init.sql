@@ -83,6 +83,7 @@ CREATE TABLE "clients" (
 	"tds_applicable" boolean DEFAULT false NOT NULL,
 	"tds_rate" numeric(5, 2),
 	"tds_section" text DEFAULT '' NOT NULL,
+	"tan" text DEFAULT '' NOT NULL,
 	"reminders_enabled" boolean DEFAULT true NOT NULL,
 	"portal_enabled" boolean DEFAULT true NOT NULL,
 	"notes" text DEFAULT '' NOT NULL,

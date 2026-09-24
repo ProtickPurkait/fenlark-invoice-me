@@ -1,5 +1,5 @@
 {
-  "id": "7dbff242-fc3e-43c5-803c-c59694a0c312",
+  "id": "3b1c5565-e361-450a-b175-6f8e9857ef2b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -602,6 +602,13 @@
         },
         "tds_section": {
           "name": "tds_section",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "tan": {
+          "name": "tan",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

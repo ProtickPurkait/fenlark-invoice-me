@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityLog,
@@ -159,30 +159,3 @@ export async function getDocumentDetail(id: string) {
 }
 
 export type DocumentDetail = NonNullable<Awaited<ReturnType<typeof getDocumentDetail>>>;
-
-/** Issued invoices a credit/debit note can be raised against. */
-export async function noteableInvoices(clientId?: string) {
-  return db
-    .select({
-      id: documents.id,
-      number: documents.number,
-      issueDate: documents.issueDate,
-      total: documents.total,
-      currency: documents.currency,
-      clientId: documents.clientId,
-      clientName: clients.name,
-    })
-    .from(documents)
-    .innerJoin(clients, eq(clients.id, documents.clientId))
-    .where(
-      and(
-        eq(documents.type, "invoice"),
-        isNotNull(documents.number),
-        ne(documents.status, "void"),
-        ne(documents.status, "draft"),
-        clientId ? eq(documents.clientId, clientId) : undefined,
-      ),
-    )
-    .orderBy(desc(documents.issueDate), desc(documents.number))
-    .limit(500);
-}
