@@ -13,16 +13,20 @@ import { dec } from "@/lib/money";
 import { loadSettings } from "@/lib/settings";
 import { defaultPlaceOfSupply } from "@/lib/tax/gst";
 import { emptyLine, type DocumentInputValues } from "@/lib/validation/document";
+import type { ScheduleInput } from "@/lib/recurring/service";
 import { DocumentEditor, type EditorInvoiceRef } from "./document-editor";
 
 export async function DocumentEditorPage({
   type,
   documentId,
   searchParams,
+  recurring,
 }: {
   type: DocumentType;
   documentId?: string;
   searchParams?: Record<string, string | string[] | undefined>;
+  /** Recurring-schedule mode: edit a template (from a profile or an invoice to copy). */
+  recurring?: { profileId: string | null; schedule: ScheduleInput; template: DocumentInputValues | null; clientId: string | null };
 }) {
   const user = await requireUser();
   if (!can(user.role, "documents:write")) redirect(DOC_LABELS[type].path);
@@ -35,7 +39,13 @@ export async function DocumentEditorPage({
   ]);
 
   let defaults: DocumentInputValues;
-  if (documentId) {
+  if (recurring?.template) {
+    defaults = recurring.template;
+    if (recurring.clientId && !clientRows.some((c) => c.id === recurring.clientId)) {
+      const [c] = await db.select().from(clients).where(eq(clients.id, recurring.clientId));
+      if (c) clientRows.push(c);
+    }
+  } else if (documentId) {
     const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
     if (!doc || doc.type !== type) notFound();
     if (doc.status !== "draft") redirect(documentPath(type, doc.id));
@@ -121,14 +131,21 @@ export async function DocumentEditorPage({
   }
 
   const label = DOC_LABELS[type];
-  const backHref = documentId ? documentPath(type, documentId) : label.path;
+  const backHref = recurring ? "/recurring" : documentId ? documentPath(type, documentId) : label.path;
+  const heading = recurring
+    ? recurring.profileId
+      ? `Edit “${recurring.schedule.name}”`
+      : "New recurring invoice"
+    : documentId
+      ? `Edit draft ${label.singular.toLowerCase()}`
+      : `New ${label.singular.toLowerCase()}`;
   return (
     <>
       <PageHeader
-        title={documentId ? `Edit draft ${label.singular.toLowerCase()}` : `New ${label.singular.toLowerCase()}`}
+        title={heading}
         back={
           <Link href={backHref} className="text-sm text-zinc-500 hover:text-zinc-800">
-            ← {documentId ? "Back" : label.plural}
+            ← {recurring ? "Recurring" : documentId ? "Back" : label.plural}
           </Link>
         }
       />
@@ -167,6 +184,7 @@ export async function DocumentEditorPage({
           profileProblems: profileProblems(settings),
         }}
         invoices={invoices}
+        recurring={recurring ? { profileId: recurring.profileId, schedule: recurring.schedule } : undefined}
       />
     </>
   );

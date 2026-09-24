@@ -33,6 +33,8 @@ import {
   type SeriesInput,
 } from "@/lib/validation/settings";
 import { BrandedEmail } from "@/emails/branded-email";
+import { isGatewayId } from "@/lib/gateways/providers";
+import { saveGateway } from "@/lib/gateways/service";
 
 function refresh() {
   revalidatePath("/", "layout");
@@ -284,4 +286,33 @@ export async function resendInvite(userId: string): Promise<ActionResult<null>> 
     if (!result.ok) throw new UserError(result.error);
     return null;
   }, "Sign-in link sent");
+}
+
+// ─── Payment gateways ────────────────────────────────────────────────────────
+
+export async function saveGatewayAction(
+  provider: string,
+  input: { enabled: boolean; mode: "test" | "live"; values: Record<string, string> },
+): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const user = await requirePermission("gateways:manage");
+    if (!isGatewayId(provider)) throw new UserError("Unknown gateway");
+    const v = z
+      .object({ enabled: z.boolean(), mode: z.enum(["test", "live"]), values: z.record(z.string(), z.string().max(500)) })
+      .parse(input);
+    await saveGateway(userActor(user), provider, v);
+    refresh();
+    return null;
+  }, "Gateway saved");
+}
+
+export async function saveGatewayRouting(input: { gatewayForInr: string; gatewayForForeign: string }): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    await requirePermission("gateways:manage");
+    const v = z
+      .object({ gatewayForInr: z.enum(["", "razorpay", "stripe"]), gatewayForForeign: z.enum(["", "razorpay", "stripe"]) })
+      .parse(input);
+    await updateSettings(v, "payment gateway routing");
+    return null;
+  }, "Saved");
 }

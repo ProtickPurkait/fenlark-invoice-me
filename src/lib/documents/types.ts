@@ -88,6 +88,8 @@ export interface LineTemplate {
 
 export interface RecurringTemplate {
   currency: string;
+  /** Fallback INR rate when a live rate can't be fetched at run time. */
+  exchangeRate: string;
   placeOfSupply: string | null;
   exportTax: ExportTax | null;
   reverseCharge: boolean;

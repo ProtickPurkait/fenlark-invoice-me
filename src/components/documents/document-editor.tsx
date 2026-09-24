@@ -19,8 +19,10 @@ import { amountInWords } from "@/lib/amount-in-words";
 import { calculateDocument } from "@/lib/calc/document";
 import { addDays } from "@/lib/dates";
 import { fetchExchangeRateAction, saveDocumentAction } from "@/lib/documents/actions";
+import { saveRecurringAction } from "@/lib/recurring/actions";
+import type { ScheduleInput } from "@/lib/recurring/service";
 import { supplyTypeLabel, taxContext } from "@/lib/documents/tax-context";
-import { DOC_LABELS, NOTE_REASONS, documentPath, type DocumentType, type GstRegistration } from "@/lib/documents/types";
+import { DOC_LABELS, NOTE_REASONS, RECURRING_FREQUENCIES, documentPath, type DocumentType, type GstRegistration } from "@/lib/documents/types";
 import { formatAmount, formatMoney } from "@/lib/money";
 import { defaultPlaceOfSupply, placeOfSupplyLabel, type ExportTax, type SupplyType } from "@/lib/tax/gst";
 import { cn } from "@/lib/utils";
@@ -84,6 +86,7 @@ export function DocumentEditor({
   settings,
   invoices,
   canCreateClients,
+  recurring,
 }: {
   documentId: string | null;
   defaults: DocumentInputValues;
@@ -93,6 +96,8 @@ export function DocumentEditor({
   /** For credit/debit notes: the invoices they can be raised against. */
   invoices?: EditorInvoiceRef[];
   canCreateClients: boolean;
+  /** Edit a recurring schedule's template instead of a document. */
+  recurring?: { profileId: string | null; schedule: ScheduleInput };
 }) {
   const router = useRouter();
   const type = defaults.type as DocumentType;
@@ -102,6 +107,7 @@ export function DocumentEditor({
   const [submitMode, setSubmitMode] = useState<"draft" | "issue">("draft");
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [fxNote, setFxNote] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleInput | null>(recurring?.schedule ?? null);
 
   const form = useForm<DocumentInputValues>({
     resolver: zodResolver(documentSchema) as never,
@@ -209,6 +215,27 @@ export function DocumentEditor({
     setFxNote(`${result.data.source}, ${result.data.date}. Check against the RBI reference rate if you need to.`);
   }
 
+  function submitSchedule() {
+    if (!schedule) return;
+    form.handleSubmit(
+      () => {
+        const values = getValues();
+        startTransition(async () => {
+          const result = await saveRecurringAction(recurring?.profileId ?? null, { schedule, document: values });
+          if (!result.ok) {
+            toast.error(result.fieldErrors ? `${result.error} ${Object.values(result.fieldErrors).join(" ")}` : result.error);
+            return;
+          }
+          toast.success("Recurring schedule saved");
+          form.reset(values);
+          router.push("/recurring");
+          router.refresh();
+        });
+      },
+      () => toast.error("Please fix the highlighted fields."),
+    )();
+  }
+
   function submit(mode: "draft" | "issue") {
     setSubmitMode(mode);
     form.handleSubmit(
@@ -269,6 +296,8 @@ export function DocumentEditor({
         </Alert>
       ) : null}
 
+      {schedule ? <ScheduleCard schedule={schedule} onChange={setSchedule} editing={Boolean(recurring?.profileId)} /> : null}
+
       <Card>
         <CardHeader title="Details" />
         <CardBody className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -308,10 +337,12 @@ export function DocumentEditor({
               />
             </Field>
           )}
-          <Field label={type === "quote" ? "Quote date" : "Date"} htmlFor="issueDate" required error={errorAt(errors, "issueDate")}>
-            <Input id="issueDate" type="date" value={issueDate ?? ""} onChange={(e) => onIssueDateChange(e.target.value)} />
-          </Field>
-          {type === "invoice" || type === "debit_note" ? (
+          {!schedule ? (
+            <Field label={type === "quote" ? "Quote date" : "Date"} htmlFor="issueDate" required error={errorAt(errors, "issueDate")}>
+              <Input id="issueDate" type="date" value={issueDate ?? ""} onChange={(e) => onIssueDateChange(e.target.value)} />
+            </Field>
+          ) : null}
+          {!schedule && (type === "invoice" || type === "debit_note") ? (
             <Field
               label="Due date"
               htmlFor="dueDate"
@@ -501,17 +532,27 @@ export function DocumentEditor({
 
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <span className="mr-auto hidden text-xs text-zinc-500 sm:block">
-          {type === "quote" ? "Quotes" : "Documents"} get their number when issued. Issued documents are locked.
+          {schedule
+            ? "Use {MONTH} or {YEAR} in text to insert the invoice's month, e.g. “Retainer — {MONTH}”."
+            : `${type === "quote" ? "Quotes" : "Documents"} get their number when issued. Issued documents are locked.`}
         </span>
         <Button type="button" variant="ghost" onClick={() => router.back()} disabled={pending}>
           Cancel
         </Button>
-        <Button type="button" variant="outline" onClick={() => submit("draft")} loading={pending && submitMode === "draft"} disabled={pending}>
-          Save draft
-        </Button>
-        <Button type="button" onClick={() => submit("issue")} loading={pending && submitMode === "issue"} disabled={pending}>
-          Save & issue
-        </Button>
+        {schedule ? (
+          <Button type="button" onClick={submitSchedule} loading={pending} disabled={pending}>
+            Save schedule
+          </Button>
+        ) : (
+          <>
+            <Button type="button" variant="outline" onClick={() => submit("draft")} loading={pending && submitMode === "draft"} disabled={pending}>
+              Save draft
+            </Button>
+            <Button type="button" onClick={() => submit("issue")} loading={pending && submitMode === "issue"} disabled={pending}>
+              Save & issue
+            </Button>
+          </>
+        )}
       </div>
 
       <Dialog open={newClientOpen} onOpenChange={setNewClientOpen}>
@@ -645,6 +686,45 @@ function LineRow({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function ScheduleCard({ schedule, onChange, editing }: { schedule: ScheduleInput; onChange: (s: ScheduleInput) => void; editing: boolean }) {
+  const set = <K extends keyof ScheduleInput>(key: K, value: ScheduleInput[K]) => onChange({ ...schedule, [key]: value });
+  return (
+    <Card>
+      <CardHeader title="Schedule" description="The daily job creates an invoice on each run date." />
+      <CardBody className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Field label="Name" htmlFor="schedule-name" required className="lg:col-span-2">
+          <Input id="schedule-name" value={schedule.name} placeholder="Monthly retainer" onChange={(e) => set("name", e.target.value)} />
+        </Field>
+        <Field label="Repeats" htmlFor="schedule-frequency">
+          <Select id="schedule-frequency" value={schedule.frequency} onChange={(e) => set("frequency", e.target.value as ScheduleInput["frequency"])}>
+            {RECURRING_FREQUENCIES.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Payment terms (days)" htmlFor="schedule-terms">
+          <Input id="schedule-terms" type="number" min={0} max={365} value={String(schedule.paymentTermsDays ?? "")} onChange={(e) => set("paymentTermsDays", e.target.value)} />
+        </Field>
+        <Field label={editing ? "Next invoice on" : "First invoice on"} htmlFor="schedule-start" required>
+          <Input id="schedule-start" type="date" value={schedule.startDate} onChange={(e) => set("startDate", e.target.value)} />
+        </Field>
+        <Field label="End date" htmlFor="schedule-end" hint="Optional">
+          <Input id="schedule-end" type="date" value={schedule.endDate ?? ""} onChange={(e) => set("endDate", e.target.value || null)} />
+        </Field>
+        <Field label="Number of invoices" htmlFor="schedule-max" hint="Optional limit">
+          <Input id="schedule-max" type="number" min={1} value={String(schedule.maxOccurrences ?? "")} onChange={(e) => set("maxOccurrences", e.target.value)} />
+        </Field>
+        <div className="flex flex-col justify-end gap-2">
+          <Checkbox label="Issue automatically" checked={schedule.autoIssue} onChange={(e) => onChange({ ...schedule, autoIssue: e.target.checked, autoSend: e.target.checked && schedule.autoSend })} />
+          <Checkbox label="Email to client" checked={schedule.autoSend} disabled={!schedule.autoIssue} onChange={(e) => set("autoSend", e.target.checked)} />
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 

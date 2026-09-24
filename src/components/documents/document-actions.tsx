@@ -10,6 +10,7 @@ import {
   FilePlus,
   Link2,
   Pencil,
+  Repeat,
   Send,
   Stamp,
   ThumbsDown,
@@ -153,6 +154,11 @@ export function DocumentActions({
             <DropdownMenuItem asChild>
               <Link href={`/debit-notes/new?invoice=${doc.id}`}>
                 <FilePlus /> New debit note
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/recurring/new?invoice=${doc.id}`}>
+                <Repeat /> Make recurring
               </Link>
             </DropdownMenuItem>
           </>
