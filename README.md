@@ -111,5 +111,6 @@ drizzle/               SQL migrations
 - Sessions are random tokens stored hashed in Postgres, sent as HttpOnly cookies. Sign-in codes are single-use, expire after 15 minutes, lock after 5 wrong attempts and are rate-limited.
 - Server actions check the user's role on every call. The proxy only makes a quick cookie check before the real one.
 - Payment-gateway secrets are encrypted with AES-256-GCM (`ENCRYPTION_KEY`) and never sent to the browser.
+- Every table has row-level security enabled with no policies. The app connects as the table owner, which RLS doesn't restrict, so Supabase's public API roles see no rows. A test fails if a table is added without it.
 - Share links use unguessable 192-bit tokens. Drafts are never public. The signature image is only ever embedded in PDFs.
 - Webhooks are verified (HMAC) and processed idempotently. The daily job requires `CRON_SECRET`.

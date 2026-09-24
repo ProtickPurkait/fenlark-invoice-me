@@ -30,6 +30,10 @@ import type {
 import type { ExportTax, SupplyType } from "@/lib/tax/gst";
 import type { UserRole } from "@/lib/auth/roles";
 
+// Every table enables row-level security with no policies. The app connects as
+// the table owner, which RLS doesn't restrict; Supabase's public API roles
+// (anon / authenticated) get no rows even if its Data API is switched on.
+
 /**
  * Money is numeric(14,2) and comes back from the driver as a string; all
  * arithmetic goes through decimal.js (see lib/money.ts).
@@ -62,7 +66,7 @@ export const users = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("users_email_key").on(t.email)],
-);
+).enableRLS();
 
 export type LoginAudience = "staff" | "portal";
 
@@ -87,7 +91,7 @@ export const loginTokens = pgTable(
     uniqueIndex("login_tokens_token_hash_key").on(t.tokenHash),
     index("login_tokens_email_idx").on(t.email, t.createdAt),
   ],
-);
+).enableRLS();
 
 export const sessions = pgTable(
   "sessions",
@@ -105,7 +109,7 @@ export const sessions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("sessions_user_idx").on(t.userId), index("sessions_expires_idx").on(t.expiresAt)],
-);
+).enableRLS();
 
 // ─── Business settings ───────────────────────────────────────────────────────
 
@@ -172,7 +176,7 @@ export const businessSettings = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [check("business_settings_singleton", sql`${t.id} = 1`)],
-);
+).enableRLS();
 
 // ─── Numbering ───────────────────────────────────────────────────────────────
 
@@ -184,7 +188,7 @@ export const numberSeries = pgTable("number_series", {
   padding: integer("padding").notNull().default(4),
   resetYearly: boolean("reset_yearly").notNull().default(true),
   updatedAt: updatedAt(),
-});
+}).enableRLS();
 
 export const numberCounters = pgTable(
   "number_counters",
@@ -195,7 +199,7 @@ export const numberCounters = pgTable(
     lastValue: integer("last_value").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.docType, t.period] })],
-);
+).enableRLS();
 
 // ─── Clients & items ─────────────────────────────────────────────────────────
 
@@ -240,7 +244,7 @@ export const clients = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("clients_name_idx").on(t.name), index("clients_email_idx").on(t.email)],
-);
+).enableRLS();
 
 export const items = pgTable("items", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -254,7 +258,7 @@ export const items = pgTable("items", {
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-});
+}).enableRLS();
 
 // ─── Documents: invoices, quotes, credit notes, debit notes ─────────────────
 
@@ -283,7 +287,7 @@ export const recurringProfiles = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("recurring_next_run_idx").on(t.status, t.nextRunDate)],
-);
+).enableRLS();
 
 export const documents = pgTable(
   "documents",
@@ -366,7 +370,7 @@ export const documents = pgTable(
     index("documents_issue_date_idx").on(t.issueDate),
     index("documents_related_idx").on(t.relatedDocumentId),
   ],
-);
+).enableRLS();
 
 export const documentLines = pgTable(
   "document_lines",
@@ -396,7 +400,7 @@ export const documentLines = pgTable(
     total: money("total").notNull(),
   },
   (t) => [index("document_lines_document_idx").on(t.documentId, t.position)],
-);
+).enableRLS();
 
 export const payments = pgTable(
   "payments",
@@ -425,7 +429,7 @@ export const payments = pgTable(
     index("payments_date_idx").on(t.date),
     uniqueIndex("payments_gateway_payment_key").on(t.gateway, t.gatewayPaymentId),
   ],
-);
+).enableRLS();
 
 // ─── Email, reminders, activity ──────────────────────────────────────────────
 
@@ -454,7 +458,7 @@ export const emailLog = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("email_log_document_idx").on(t.documentId), index("email_log_created_idx").on(t.createdAt)],
-);
+).enableRLS();
 
 export const remindersSent = pgTable(
   "reminders_sent",
@@ -467,7 +471,7 @@ export const remindersSent = pgTable(
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.documentId, t.offsetDays] })],
-);
+).enableRLS();
 
 export type ActorType = "user" | "client" | "system" | "gateway";
 
@@ -489,7 +493,7 @@ export const activityLog = pgTable(
     index("activity_entity_idx").on(t.entityType, t.entityId, t.createdAt),
     index("activity_created_idx").on(t.createdAt),
   ],
-);
+).enableRLS();
 
 // ─── Payment gateways ────────────────────────────────────────────────────────
 
@@ -503,7 +507,7 @@ export const gatewayConfigs = pgTable("gateway_configs", {
   secretConfig: text("secret_config"),
   updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
   updatedAt: updatedAt(),
-});
+}).enableRLS();
 
 export const gatewayLinks = pgTable(
   "gateway_links",
@@ -525,7 +529,7 @@ export const gatewayLinks = pgTable(
     uniqueIndex("gateway_links_external_key").on(t.provider, t.externalId),
     index("gateway_links_document_idx").on(t.documentId),
   ],
-);
+).enableRLS();
 
 export const webhookEvents = pgTable(
   "webhook_events",
@@ -540,7 +544,7 @@ export const webhookEvents = pgTable(
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("webhook_events_provider_event_key").on(t.provider, t.eventId)],
-);
+).enableRLS();
 
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;

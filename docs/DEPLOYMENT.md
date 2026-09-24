@@ -6,14 +6,16 @@ The examples use `billing.fenlark.in` as the app's address. Replace it with what
 
 ## 1. Supabase: database and storage
 
-1. Create a project at [supabase.com](https://supabase.com). Choose the **Mumbai (ap-south-1)** region and save the database password somewhere safe.
-2. Go to **Connect → Connection string** and copy two URIs:
+1. Create a project at [supabase.com](https://supabase.com) and choose the **South Asia (Mumbai)** region. For the database password, use **Generate a password** and save it somewhere safe. Keep it to letters and digits: characters like `@ # / :` break the connection strings below.
+2. Click **Connect** at the top of the project, open the **Connection String** tab, and copy two URIs. Replace `[YOUR-PASSWORD]` in both.
    - **Transaction pooler** (port `6543`). This becomes `DATABASE_URL`, used by the app.
-   - **Session pooler** or **Direct connection** (port `5432`). This becomes `MIGRATION_DATABASE_URL`, used to run migrations.
+   - **Session pooler** (port `5432`). This becomes `MIGRATION_DATABASE_URL`, used to run migrations. Don't use **Direct connection**: on the free plan it only works over IPv6, which Vercel's build servers can't reach.
+3. Go to **Storage → New bucket**, name it `fenlark` and leave **Public bucket** off. Logos and signatures are stored here. No bucket policies are needed.
+4. Go to **Project Settings → Data API** (called **API** in older layouts) and copy the **Project URL**. This is `SUPABASE_URL`.
+5. Go to **Project Settings → API Keys** and create or copy a **Secret key** (`sb_secret_…`), or use the **service_role** key under **Legacy API keys**. This is `SUPABASE_SERVICE_ROLE_KEY`. It has full access, so only ever put it in Vercel's environment variables, never in code, a browser, chat or email. If logo uploads later fail with an authorization error, switch to the legacy service_role key.
+6. In **Project Settings → Data API**, turn **Enable Data API** off. Supabase otherwise publishes every table through a public web API; the app doesn't use it, because it connects to the database directly. As a second lock, the app's migrations enable row-level security on every table, so that API returns no rows even if it's switched back on.
 
-   Replace `[YOUR-PASSWORD]` in both.
-3. Go to **Storage → New bucket**, name it `fenlark` and leave it **private**. Logos and signatures are stored here.
-4. Go to **Project Settings → API** and copy the **Project URL** (`SUPABASE_URL`) and the **service_role** key (`SUPABASE_SERVICE_ROLE_KEY`). The service_role key has full access: only ever put it in Vercel's environment variables, never in code or a browser.
+You don't need the **publishable key** or a personal **access token** (`sbp_…`). If you've shared either, or any secret, somewhere it could be read, revoke it and create a new one.
 
 ## 2. Resend: email
 
@@ -39,13 +41,13 @@ openssl rand -hex 32      # CRON_SECRET — protects the daily job
    | Name | Value |
    | --- | --- |
    | `DATABASE_URL` | Supabase transaction pooler URI (port 6543) |
-   | `MIGRATION_DATABASE_URL` | Supabase session/direct URI (port 5432) |
+   | `MIGRATION_DATABASE_URL` | Supabase session pooler URI (port 5432) |
    | `APP_URL` | `https://billing.fenlark.in` |
    | `OWNER_EMAIL` | your email; the first sign-in with it creates the owner account |
    | `RESEND_API_KEY` | from Resend |
    | `EMAIL_FROM` | `Fenlark Billing <billing@fenlark.in>` |
    | `SUPABASE_URL` | Supabase Project URL |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase secret key (`sb_secret_…`) or legacy service_role key |
    | `SUPABASE_STORAGE_BUCKET` | `fenlark` |
    | `ENCRYPTION_KEY` | from step 3 |
    | `CRON_SECRET` | from step 3 |
